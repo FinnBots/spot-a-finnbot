@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>FinnBots — Spot-a-FinnBot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Jersey+15&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --plum:#5f4c57; --plum-deep:#3e323a; --bg-soft:#fdf3e7; --card:#fffaf3; --ink:#2a2230;
+    --muted:#6e6470; --electric:#3a6ff7; --amber:#f2a03d; --line:rgba(95,76,87,0.16);
+    --shadow-sm:0 1px 3px rgba(42,34,48,0.10); --shadow-md:0 6px 18px rgba(42,34,48,0.12); --shadow-lg:0 14px 34px rgba(42,34,48,0.22);
+    --r-sm:8px; --r-md:10px; --r-lg:16px; --r-xl:20px; --r-pill:9999px;
+    --smooth:cubic-bezier(.4,0,.2,1);
+    --font-display:'Jersey 15', ui-monospace, monospace;
+    --font-body:'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg-soft:#221b20; --card:#2f2730; --ink:#f4eef2; --muted:#b9aab3; --line:rgba(255,255,255,0.12);
+      --shadow-md:0 6px 18px rgba(0,0,0,0.42); --shadow-lg:0 14px 34px rgba(0,0,0,0.55); }
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  html{overflow:hidden;}
+  body{
+    font-family:var(--font-body); background:var(--bg-soft); color:var(--ink); line-height:1.3;
+    -webkit-font-smoothing:antialiased; display:flex; justify-content:center; overflow:hidden;
+    height:100vh; height:100dvh;
+    padding: max(8px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  }
+  .wrap{ width:100%; max-width:min(480px, 96vw); height:100%; display:flex; flex-direction:column; gap: clamp(6px, 1.4dvh, 12px); }
+
+  .test-banner{ flex:0 0 auto; background:#c0392b; color:#fff; font-family:var(--font-display); font-size:clamp(10px,1.3vw,14px); text-align:center; padding:9px 12px; border-radius:var(--r-sm); line-height:1.6; }
+  .test-banner b{ display:block; font-size:clamp(11px,1.5vw,16px); margin-bottom:2px; }
+  .hidden{ display:none !important; }
+
+  .topbar{ flex:0 0 auto; display:flex; align-items:center; gap:8px; background:var(--card); border-radius:var(--r-lg); padding:10px 14px; box-shadow:var(--shadow-sm); }
+  .eyebrow{ font-family:var(--font-display); font-size:clamp(9px,1.1vw,13px); letter-spacing:.5px; color:var(--plum); background:rgba(95,76,87,0.10); padding:6px 10px; border-radius:var(--r-pill); flex:0 0 auto; white-space:nowrap; }
+  h1{ font-family:var(--font-display); font-size:clamp(16px,2.6vw,28px); color:var(--ink); flex:1 1 auto; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .infobtn{ flex:0 0 auto; appearance:none; border:none; cursor:pointer; width:clamp(28px,3vw,38px); height:clamp(28px,3vw,38px); border-radius:50%; background:var(--bg-soft); color:var(--plum); box-shadow:var(--shadow-sm); font-family:var(--font-display); font-size:clamp(12px,1.4vw,16px); display:flex; align-items:center; justify-content:center; }
+  .infobtn:focus-visible, .connect-btn:focus-visible, .play:focus-visible, .again:focus-visible, .retry-btn:focus-visible, .hint-btn:focus-visible{ outline:3px solid var(--electric); outline-offset:2px; }
+
+  .quickfacts{ flex:0 0 auto; background:var(--card); border-radius:var(--r-md); padding:8px 14px; box-shadow:var(--shadow-sm); }
+  .quickfacts p{ margin:0; font-size:clamp(11px,1.4vw,15px); color:var(--muted); line-height:1.4; text-align:center; }
+  .quickfacts b{ color:var(--ink); font-weight:600; }
+
+  .walletbar{ flex:0 0 auto; background:var(--plum); color:#fff; border-radius:var(--r-lg); padding:10px 14px; box-shadow:var(--shadow-sm); display:flex; flex-direction:column; gap:8px; }
+  .wb-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .wb-text{ font-size:clamp(12px,1.5vw,15px); line-height:1.35; color:rgba(255,255,255,0.88); flex:1 1 auto; min-width:0; }
+  .connect-btn{ appearance:none; border:none; cursor:pointer; flex:0 0 auto; font-family:var(--font-body); font-weight:600; font-size:clamp(13px,1.5vw,15px); background:#fff; color:var(--plum); padding:8px 16px; border-radius:var(--r-sm); }
+  .connect-btn:disabled{ opacity:.65; cursor:default; }
+  .wallet-status{ font-size:clamp(12px,1.4vw,14px); background:rgba(255,255,255,0.12); padding:8px 10px; border-radius:var(--r-sm); line-height:1.45; max-height:4.6em; overflow-y:auto; }
+  .wallet-status .addr{ font-family:var(--font-display); font-size:clamp(9px,1vw,12px); letter-spacing:.3px; }
+  .wallet-status.ok{ background:rgba(52,199,89,0.24); }
+  .wallet-status.warn{ background:rgba(242,160,61,0.24); }
+  .wallet-status a{ color:#fff; }
+  .retry-btn{ appearance:none; border:none; cursor:pointer; font-family:var(--font-body); font-weight:600; font-size:11px; color:var(--plum); background:#fff; padding:4px 9px; border-radius:var(--r-sm); margin:2px 0; }
+
+  .play-surface{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; gap:6px; }
+  .round-meta{ flex:0 0 auto; display:flex; align-items:center; justify-content:space-between; gap:6px; }
+  .tier-pill{ font-size:11px; color:var(--plum); background:rgba(95,76,87,0.10); border-radius:var(--r-pill); padding:4px 10px; font-weight:600; font-family:var(--font-display); }
+  .timer-pill{ background:var(--card); border:1px solid var(--plum); border-radius:var(--r-sm); padding:4px 10px; font-size:12px; color:var(--plum); font-family:var(--font-display); box-shadow:var(--shadow-sm); }
+  .timer-pill.urgent{ border-color:#c0392b; color:#c0392b; }
+  .hint-btn{ appearance:none; background:var(--card); border:1px solid var(--plum); color:var(--plum); border-radius:var(--r-sm); padding:6px 10px; font-size:11px; font-family:var(--font-display); cursor:pointer; box-shadow:var(--shadow-sm); }
+  .hint-btn:disabled{ opacity:.4; cursor:not-allowed; }
+
+  .target-prompt{ flex:0 0 auto; text-align:center; font-size:13px; color:var(--ink); background:var(--card); border-radius:var(--r-sm); padding:8px 10px; box-shadow:var(--shadow-sm); }
+  .target-prompt b{ font-family:var(--font-display); font-size:14px; color:var(--plum); }
+
+  .grid-wrap{ flex:1 1 auto; min-height:0; display:flex; align-items:center; justify-content:center; overflow:hidden; container-type:size; container-name:grid; }
+  .grid{ width:100%; display:grid; grid-template-columns:repeat(5,1fr); gap: clamp(3px, 1.6cqh, 8px) clamp(3px, 1.6cqw, 8px); }
+  .tile{ appearance:none; border:2px solid transparent; cursor:pointer; aspect-ratio:1/1; border-radius:var(--r-sm); overflow:hidden; position:relative; background:var(--card); box-shadow:var(--shadow-sm); transition:transform 150ms var(--smooth), border-color 120ms; }
+  .tile img{ width:100%; height:100%; object-fit:cover; image-rendering:pixelated; display:block; }
+  .tile .img-fallback{ width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-size:10px; color:var(--plum); background:var(--bg-soft); }
+  .tile.selected{ border-color:var(--electric); transform:scale(1.04); }
+  .tile.correct{ border-color:var(--amber); box-shadow:0 0 0 3px var(--amber); }
+  .tile.wrong{ border-color:#c0392b; opacity:.5; }
+  .tile:disabled{ cursor:default; }
+
+  .action-bar{ flex:0 0 auto; }
+  .play{ appearance:none; border:none; width:100%; cursor:pointer; font-family:var(--font-display); font-size:clamp(14px,1.8vw,18px); color:#fff; background:var(--plum); padding:12px var(--r-lg); border-radius:var(--r-sm); box-shadow:var(--shadow-md); }
+  .play:disabled{ background:var(--line); color:var(--muted); box-shadow:none; cursor:not-allowed; }
+  .play:active:not(:disabled){ transform:scale(.98); }
+
+  footer{ flex:0 0 auto; text-align:center; }
+  footer .tag{ font-family:var(--font-display); font-size:clamp(9px,1.1vw,12px); color:var(--muted); line-height:1.6; margin:0 0 4px; }
+  .marketing-links{ display:flex; justify-content:center; gap:16px; }
+  .marketing-links a{ font-family:var(--font-body); font-size:clamp(11px,1.3vw,13px); font-weight:500; color:var(--electric); text-decoration:none; }
+  .marketing-links a:hover{ text-decoration:underline; }
+
+  #stage:not(:empty){ position:fixed; inset:0; z-index:40; background:rgba(42,34,48,0.55); display:flex; align-items:center; justify-content:center; padding:16px; }
+  .result{ width:100%; max-width:400px; max-height:90dvh; overflow-y:auto; background:var(--card); border-radius:var(--r-lg); padding:20px; box-shadow:var(--shadow-lg); text-align:center; }
+  .result.win{ box-shadow:var(--shadow-lg), inset 0 0 0 3px var(--amber); }
+  .result h2{ font-family:var(--font-display); font-size:15px; margin:0 0 10px; }
+  .result.win h2{ color:var(--amber); }
+  .result .detail{ font-size:14px; color:var(--muted); margin:0 0 12px; }
+  .result .prize{ display:inline-block; font-family:var(--font-display); font-size:14px; color:var(--amber); background:rgba(242,160,61,0.14); padding:8px 14px; border-radius:var(--r-pill); margin-bottom:12px; }
+  .again{ appearance:none; cursor:pointer; font-family:var(--font-body); font-weight:600; font-size:14px; color:var(--plum); background:transparent; border:2px solid var(--line); padding:8px 18px; border-radius:var(--r-sm); }
+
+  #howtoModal:not(.hidden){ position:fixed; inset:0; z-index:50; background:rgba(42,34,48,0.55); display:flex; align-items:center; justify-content:center; padding:16px; }
+  .howto-card{ width:100%; max-width:420px; max-height:85dvh; overflow-y:auto; background:var(--card); border-radius:var(--r-lg); padding:20px; box-shadow:var(--shadow-lg); }
+  .howto-card h2{ font-family:var(--font-display); font-size:13px; margin:0 0 12px; }
+  .howto-card p{ font-size:13px; color:var(--muted); line-height:1.5; margin:0 0 8px; }
+  .howto-card b{ color:var(--ink); }
+  .howto-close{ appearance:none; border:none; cursor:pointer; width:100%; font-family:var(--font-body); font-weight:600; font-size:14px; background:var(--plum); color:#fff; padding:10px; border-radius:var(--r-sm); margin-top:6px; }
+
+  @media (prefers-reduced-motion: reduce){ *{ transition:none !important; animation:none !important; } }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="test-banner hidden" id="testBanner"><b>TEST MODE</b>Fake $OIL, local validator, no real funds</div>
+
+    <header class="topbar">
+      <span class="eyebrow">FINNBOTS · SOLANA</span>
+      <h1>Spot-a-FinnBot</h1>
+      <button class="infobtn" id="infoBtn" type="button" aria-haspopup="dialog" aria-controls="howtoModal" title="How this works">i</button>
+    </header>
+
+    <div class="quickfacts"><p><b>25 $OIL</b> to enter &nbsp;·&nbsp; <b>10 $OIL</b> hint &nbsp;·&nbsp; Bot-holder <b>1.5×</b> prize</p></div>
+
+    <section class="walletbar" id="connectCard">
+      <div class="wb-row">
+        <span class="wb-text">Hold 25 $OIL to play — a Bot pays 1.5× on a win</span>
+        <button class="connect-btn" id="connectBtn" type="button">Connect</button>
+      </div>
+      <div class="wallet-status hidden" id="walletStatus" aria-live="polite"></div>
+    </section>
+
+    <main class="play-surface">
+      <div class="round-meta">
+        <span class="tier-pill" id="tierPill">Not started</span>
+        <span class="timer-pill" id="timerPill">--</span>
+        <button class="hint-btn" id="hintBtn" type="button" disabled>Hint (10 $OIL)</button>
+      </div>
+      <div class="target-prompt" id="targetPrompt">Connect your wallet, then play to see today's target.</div>
+      <div class="grid-wrap">
+        <span id="gridLabel" class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;">Spot the Bot matching the rolled traits</span>
+        <div class="grid" role="radiogroup" aria-labelledby="gridLabel" id="grid"></div>
+      </div>
+    </main>
+
+    <div class="action-bar">
+      <button class="play" id="playBtn" disabled>Connect wallet to play</button>
+    </div>
+
+    <footer>
+      <p class="tag">Built for fun. Revived with purpose.</p>
+      <div class="marketing-links">
+        <a href="https://magiceden.us/marketplace/finnbot" target="_blank" rel="noopener">Buy a Bot ↗</a>
+        <a href="https://finnstergram.com" target="_blank" rel="noopener">finnstergram.com ↗</a>
+      </div>
+    </footer>
+  </div>
+
+  <div class="stage" id="stage" aria-live="polite"></div>
+
+  <div class="hidden" id="howtoModal" role="dialog" aria-modal="true" aria-labelledby="howtoTitle">
+    <div class="howto-card">
+      <h2 id="howtoTitle">How this works</h2>
+      <p><b>Roll and spot.</b> Pay 25 $OIL to start a round. You'll see a trait combination and 45 seconds to find the one matching Bot among 25 on screen.</p>
+      <p><b>Difficulty varies.</b> Rounds are easy, medium, or hard (roughly 40% / 40% / 20% of rounds) — harder rounds have more decoy Bots that closely resemble the target. Which tier you get is derived from your entry transaction's own signature, so nobody — including us — can control it in advance.</p>
+      <p><b>Stuck?</b> A 10 $OIL hint reveals one of the target's traits.</p>
+      <p><b>Bot-holder bonus.</b> Hold a FinnBot and a win pays 1.5× the round's prize (Easy 100, Medium 150, Hard 300 $OIL before the bonus), paid in the next weekly batch — same as emissions, not instantly.</p>
+      <p><b>Payment.</b> Each action (entry, hint) is exactly one signed transaction. Nothing is ever taken without your approval.</p>
+      <p><b>Wallet safety.</b> We only ever read your $OIL balance and which Bots you hold. We'll never ask for your seed phrase.</p>
+      <button class="howto-close" id="howtoCloseBtn" type="button">Got it</button>
+    </div>
+  </div>
+
+  <script>
+    (function(){
+      "use strict";
+      var infoBtn = document.getElementById('infoBtn');
+      var modal = document.getElementById('howtoModal');
+      var closeBtn = document.getElementById('howtoCloseBtn');
+      function open(){ modal.classList.remove('hidden'); closeBtn.focus(); }
+      function close(){ modal.classList.add('hidden'); infoBtn.focus(); }
+      infoBtn.addEventListener('click', open);
+      closeBtn.addEventListener('click', close);
+      modal.addEventListener('click', function(e){ if(e.target === modal) close(); });
+      document.addEventListener('keydown', function(e){ if(e.key === 'Escape' && !modal.classList.contains('hidden')) close(); });
+    })();
+  </script>
+
+<script src="phantom-deeplink-libs.min.js?v=20260707a"></script>
+<script src="phantom-mobile.js?v=20260707a"></script>
+<script src="solana-web3.iife.min.js?v=20260707a"></script>
+<script src="spot-a-finnbot-scene-selector.js?v=20260707a"></script>
+<script>
+(function(){
+  "use strict";
+
+  var BUILD_TAG = 'v1-20260707a';
+  console.log('[spot-a-finnbot] build', BUILD_TAG);
+
+  var TEST_MODE = true;
+
+  var CFG = TEST_MODE ? {
+    RPC: 'http://127.0.0.1:8899',
+    TOKEN_PROGRAM: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
+    MEMO_PROGRAM: 'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr',
+    OIL_MINT: '6baNBq3oskrVv32sVRun5nnuFMkdqgMJZQ9GP267ATsi',        // created fresh 7 July 2026 -- validator was reset, Pick-a-Bot's old test mint no longer existed
+    TREASURY: '8tzZzNiGkE2kYXhUSauNEUyVHiaWBt5pBagg7CHKPNBM',
+    TREASURY_TOKEN_ACCOUNT: 'DgMvLhTYUAHPHXAQJv7PXJrpnqDPNSsVPvtxneNYWBrG', // created fresh 7 July 2026, matches the new OIL_MINT above
+    ENTRY_FEE: 25,
+    HINT_FEE: 10,
+    DECIMALS: 2
+  } : {
+    RPC: 'https://finnbots-rpc.mart-kin1000.workers.dev',
+    TOKEN_PROGRAM: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
+    MEMO_PROGRAM: 'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr',
+    OIL_MINT: 'HrcfXJcFdMoLfbkN5qCTSFrLsAgJNHitmwKc5AyS7xzf',
+    TREASURY: '75WPN3kwYUT5kdPU7V3Fp3LhnxmPC38bsgBCasRQdXMR',
+    TREASURY_TOKEN_ACCOUNT: '2ZBNMLZFfHCuZm9Lfc3b7ut296tRwGtapuXad7zSm1ED',
+    ENTRY_FEE: 25,
+    HINT_FEE: 10,
+    DECIMALS: 2
+  };
+
+  var MEMO_TAG = 'FSFB';
+  var ROUND_SECONDS = 45; // revised from 30s -- 8 July 2026, after real testing showed 30s too tight for reading the trait prompt + scanning a 5x5 grid
+  var HOLDER_BONUS_MULTIPLIER = 1.5;
+  var TIER_PRIZES = { easy: 100, medium: 150, hard: 300 }; // locked 8 July 2026 -- replaces the Pick-a-Bot-copied 200 placeholder
+  var EXCLUDED_BOT_NUMBERS = new Set(["1640", "2984"]);
+  var ARWEAVE_BASE = 'https://arweave.net/_cPSCheRvzVBlZK7QwM-3nXtteMdBbUn-zJhbGRlMmo';
+
+  var wallet = { pubkey: null, bots: 0, oil: 0 };
+  var botTraits = null, botsIds = null, dataReady = false;
+  var currentRound = null;
+  var selectedTileIndex = null;
+  var timerInterval = null;
+  var hintUsed = false;
+  var busy = false;
+
+  var grid = document.getElementById('grid');
+  var playBtn = document.getElementById('playBtn');
+  var hintBtn = document.getElementById('hintBtn');
+  var stage = document.getElementById('stage');
+  var connectBtn = document.getElementById('connectBtn');
+  var walletStatus = document.getElementById('walletStatus');
+  var tierPill = document.getElementById('tierPill');
+  var timerPill = document.getElementById('timerPill');
+  var targetPrompt = document.getElementById('targetPrompt');
+
+  if(TEST_MODE){ document.getElementById('testBanner').classList.remove('hidden'); }
+
+  (async function loadGameData(){
+    try{
+      var r1 = await fetch('bot_traits.json', { cache:'no-store' });
+      var r2 = await fetch('bots_ids.json', { cache:'no-store' });
+      botTraits = await r1.json();
+      botsIds = await r2.json();
+    }catch(e){
+      console.error('[spot-a-finnbot] failed to load game data', e);
+    }
+    dataReady = true;
+  })();
+
+  function botImageURL(botNumber){ return ARWEAVE_BASE + '/' + botNumber + '.png'; }
+  function botImageHTML(botNumber, alt){
+    return '<img src="'+botImageURL(botNumber)+'" alt="'+alt+'" loading="lazy" '
+      + 'onerror="this.replaceWith(Object.assign(document.createElement(\'span\'),{'
+      + 'textContent:\'#'+botNumber+'\',className:\'img-fallback\'}));" />';
+  }
+
+  function pickRandomTargetBotNumber(){
+    var candidates = Object.keys(botTraits).filter(function(n){ return !EXCLUDED_BOT_NUMBERS.has(n); });
+    return candidates[Math.floor(Math.random() * candidates.length)];
+  }
+
+  function renderTargetPrompt(traits, revealedKey){
+    var values = Object.values(traits);
+    var html = 'Find the Bot with: <b>' + values.join(', ') + '</b>';
+    if(revealedKey){ html += '<br/>Hint: <b>' + revealedKey + ' = ' + traits[revealedKey] + '</b>'; }
+    targetPrompt.innerHTML = html;
+  }
+
+  function renderGrid(round){
+    grid.innerHTML = '';
+    round.gridBotNumbers.forEach(function(botNumber, i){
+      var t = document.createElement('button');
+      t.className = 'tile';
+      t.type = 'button';
+      t.setAttribute('role', 'radio');
+      t.setAttribute('aria-checked', 'false');
+      t.setAttribute('aria-label', 'Grid position ' + (i+1));
+      t.innerHTML = botImageHTML(botNumber, 'Bot #' + botNumber);
+      t.addEventListener('click', function(){ selectTile(i); });
+      grid.appendChild(t);
+    });
+  }
+
+  function selectTile(index){
+    if(busy || !currentRound) return;
+    selectedTileIndex = index;
+    Array.prototype.forEach.call(grid.children, function(t, i){
+      t.classList.toggle('selected', i === index);
+      t.setAttribute('aria-checked', i === index ? 'true' : 'false');
+    });
+    playBtn.disabled = false;
+    playBtn.textContent = 'Confirm selection';
+  }
+
+  function startTimerFromDeadline(deadlineMs){
+    clearInterval(timerInterval);
+    function tick(){
+      var msLeft = deadlineMs - Date.now();
+      if(msLeft <= 0){
+        clearInterval(timerInterval);
+        updateTimerDisplay(0);
+        finishRound(false);
+        return;
+      }
+      updateTimerDisplay(Math.ceil(msLeft / 1000));
+    }
+    tick();
+    timerInterval = setInterval(tick, 250);
+  }
+  function updateTimerDisplay(seconds){
+    var m = Math.floor(seconds / 60);
+    var s = String(seconds % 60).padStart(2, '0');
+    timerPill.textContent = m + ':' + s;
+    timerPill.classList.toggle('urgent', seconds <= 10);
+  }
+
+  var ROUND_STORAGE_KEY = 'fb_spotfinnbot_pending_round';
+  function saveRoundState(){
+    if(!currentRound) return;
+    try{
+      localStorage.setItem(ROUND_STORAGE_KEY, JSON.stringify({
+        gridBotNumbers: currentRound.gridBotNumbers,
+        targetIndex: currentRound.targetIndex,
+        tier: currentRound.tier,
+        targetBotNumber: currentRound.targetBotNumber,
+        roundStartedAt: currentRound.roundStartedAt,
+        hintUsed: hintUsed,
+        owner: wallet.pubkey
+      }));
+    }catch(e){}
+  }
+  function loadRoundState(){
+    try{
+      var v = localStorage.getItem(ROUND_STORAGE_KEY);
+      return v ? JSON.parse(v) : null;
+    }catch(e){ return null; }
+  }
+  function clearRoundState(){
+    try{ localStorage.removeItem(ROUND_STORAGE_KEY); }catch(e){}
+  }
+
+  function restoreRoundIfStillValid(){
+    var saved = loadRoundState();
+    if(!saved) return false;
+    var deadline = saved.roundStartedAt + ROUND_SECONDS * 1000;
+    if(Date.now() >= deadline){ clearRoundState(); return false; }
+    currentRound = saved;
+    hintUsed = saved.hintUsed;
+    if(saved.owner) wallet.pubkey = saved.owner;
+    tierPill.textContent = saved.tier.charAt(0).toUpperCase() + saved.tier.slice(1) + ' round';
+    renderTargetPrompt(botTraits[saved.targetBotNumber], hintUsed ? Object.keys(botTraits[saved.targetBotNumber])[0] : null);
+    renderGrid(saved);
+    hintBtn.disabled = hintUsed || busy;
+    playBtn.textContent = 'Select a Bot';
+    playBtn.disabled = true;
+    startTimerFromDeadline(deadline);
+    return true;
+  }
+
+  async function beginRoundFromSignature(sigBytes){
+    var digest = await crypto.subtle.digest('SHA-256', sigBytes);
+    var hex = Array.prototype.map.call(new Uint8Array(digest), function(b){ return b.toString(16).padStart(2,'0'); }).join('');
+    var tier = deriveTierFromSignature(hex);
+
+    var targetBotNumber = pickRandomTargetBotNumber();
+    var built = buildRound(botTraits, targetBotNumber, tier);
+
+    currentRound = {
+      gridBotNumbers: built.gridBotNumbers,
+      targetIndex: built.targetIndex,
+      tier: tier,
+      targetBotNumber: targetBotNumber,
+      roundStartedAt: Date.now()
+    };
+    selectedTileIndex = null;
+    hintUsed = false;
+    saveRoundState();
+
+    tierPill.textContent = tier.charAt(0).toUpperCase() + tier.slice(1) + ' round';
+    hintBtn.disabled = false;
+    playBtn.textContent = 'Select a Bot';
+    playBtn.disabled = true;
+
+    renderTargetPrompt(botTraits[targetBotNumber]);
+    renderGrid(currentRound);
+    startTimerFromDeadline(currentRound.roundStartedAt + ROUND_SECONDS * 1000);
+  }
+
+  function finishRound(won){
+    clearInterval(timerInterval);
+    busy = false;
+    clearRoundState();
+
+    if(currentRound){
+      Array.prototype.forEach.call(grid.children, function(t, i){
+        if(i === currentRound.targetIndex) t.classList.add('correct');
+        else if(i === selectedTileIndex) t.classList.add('wrong');
+        t.disabled = true;
+      });
+    }
+
+    var tierPrize = currentRound ? TIER_PRIZES[currentRound.tier] : TIER_PRIZES.easy; // fallback should never trigger -- currentRound only null if finishRound is called incorrectly
+    var prize = wallet.bots > 0 ? Math.round(tierPrize * HOLDER_BONUS_MULTIPLIER) : tierPrize;
+    var html = '<div class="result ' + (won ? 'win' : '') + '">';
+    if(won){
+      html += '<h2>Spotted!</h2>';
+      html += '<span class="prize">' + prize + ' $OIL' + (wallet.bots > 0 ? ' (1.5\u00d7 Bot-holder bonus)' : '') + ' \u2014 recorded for the weekly batch</span>';
+      html += '<p class="detail">Prize isn\u2019t sent instantly \u2014 it arrives with the next weekly $OIL payout, same as emissions.</p>';
+    } else {
+      html += '<h2>Not this time</h2>';
+      html += '<p class="detail">Time ran out or the wrong Bot was selected. Your ' + CFG.ENTRY_FEE + ' $OIL entry is on-chain. Have another go any time.</p>';
+    }
+    html += '<button class="again" id="againBtn" type="button">Play again</button></div>';
+    stage.innerHTML = html;
+    document.getElementById('againBtn').addEventListener('click', resetToPlayState);
+  }
+
+  function resetToPlayState(){
+    stage.innerHTML = '';
+    currentRound = null;
+    selectedTileIndex = null;
+    hintUsed = false;
+    grid.innerHTML = '';
+    targetPrompt.textContent = 'Play to see the next target.';
+    tierPill.textContent = 'Not started';
+    timerPill.textContent = '--';
+    hintBtn.disabled = true;
+    playBtn.disabled = !canPlay();
+    playBtn.textContent = canPlay() ? 'Play (' + CFG.ENTRY_FEE + ' $OIL)' : 'Connect wallet to play';
+    if(wallet.pubkey) checkHolder(wallet.pubkey);
+  }
+
+  function getProvider(){
+    if(window.phantom && window.phantom.solana && window.phantom.solana.isPhantom) return window.phantom.solana;
+    if(window.solana && window.solana.isPhantom) return window.solana;
+    return null;
+  }
+  function shortAddr(a){ return a.slice(0,4)+'\u2026'+a.slice(-4); }
+  function setStatus(html, cls){
+    walletStatus.classList.remove('hidden');
+    walletStatus.className = 'wallet-status' + (cls ? ' '+cls : '');
+    walletStatus.innerHTML = html;
+  }
+  function canPlay(){ return !!wallet.pubkey && wallet.oil >= CFG.ENTRY_FEE; }
+  function delay(ms){ return new Promise(function(res){ setTimeout(res, ms); }); }
+
+  connectBtn.addEventListener('click', async function(){
+    // TEMPORARY DIAGNOSTIC -- 8 July 2026, remove once mobile connect is confirmed working.
+    // Shows real values instead of guessing from screenshots.
+    var diag = 'DIAG: window.phantom=' + (!!window.phantom) +
+      ' window.phantom.solana=' + (!!(window.phantom && window.phantom.solana)) +
+      ' window.solana=' + (!!window.solana) +
+      ' isPhantom=' + (!!(window.solana && window.solana.isPhantom)) +
+      ' PhantomMobile=' + (!!window.PhantomMobile) +
+      ' isMobile=' + (!!(window.PhantomMobile && PhantomMobile.isMobile())) +
+      ' UA=' + navigator.userAgent.slice(0, 60);
+    console.log('[spot-a-finnbot]', diag);
+    setStatus(diag, 'warn');
+    await new Promise(function(r){ setTimeout(r, 4000); }); // pause so the diagnostic is readable before anything else overwrites it
+
+    var provider = getProvider();
+    if(!provider){
+      if(window.PhantomMobile && PhantomMobile.isMobile()){
+        var inBrowseAlready = new URLSearchParams(window.location.search).get('src') === 'browse';
+        if(!inBrowseAlready){
+          connectBtn.disabled = true;
+          connectBtn.textContent = 'Opening in Phantom\u2026';
+          setStatus('Opening this game inside Phantom\u2019s browser \u2014 everything runs in one place there.');
+          var target = window.location.origin + window.location.pathname + '?src=browse';
+          window.location.href = 'https://phantom.app/ul/browse/' + encodeURIComponent(target) + '?ref=' + encodeURIComponent(window.location.origin);
+          return;
+        }
+        connectBtn.disabled = true;
+        connectBtn.textContent = 'Opening Phantom\u2026';
+        setStatus('Opening Phantom \u2014 approve the connection, then you\u2019ll come straight back here.');
+        PhantomMobile.connect(window.location.origin + window.location.pathname);
+        return;
+      }
+      setStatus('Phantom isn\u2019t reachable here. Open this page in your own browser with the <a href="https://phantom.app" target="_blank" rel="noopener">Phantom</a> extension installed.', 'warn');
+      return;
+    }
+    connectBtn.disabled = true;
+    connectBtn.textContent = 'Connecting\u2026';
+    try{
+      var resp = await provider.connect();
+      wallet.pubkey = resp.publicKey.toString();
+      connectBtn.textContent = 'Connected';
+      setStatus('Connected as <span class="addr">'+shortAddr(wallet.pubkey)+'</span><br/>Checking your $OIL balance\u2026');
+      checkHolder(wallet.pubkey);
+    }catch(e){
+      connectBtn.disabled = false;
+      connectBtn.textContent = 'Connect Phantom';
+      setStatus('Connection cancelled. Tap Connect to try again.', 'warn');
+    }
+  });
+
+  async function fetchTokenAccounts(ep, body){
+    var ctrl = new AbortController();
+    var to = setTimeout(function(){ ctrl.abort(); }, 9000);
+    try{
+      var r = await fetch(ep, { method:'POST', headers:{'Content-Type':'application/json'}, body:body, signal:ctrl.signal });
+      clearTimeout(to);
+      if(!r.ok) return null;
+      var j = await r.json();
+      if(j.error || !j.result || !j.result.value) return null;
+      return j.result.value;
+    }catch(e){ clearTimeout(to); return null; }
+  }
+
+  function showVerifyFail(owner){
+    setStatus('Connected as <span class="addr">'+shortAddr(owner)+'</span><br/>Couldn\u2019t verify your Bots just now. <button id="retryCheck" class="retry-btn" type="button">Retry check</button>', 'warn');
+    var rb = document.getElementById('retryCheck');
+    if(rb){ rb.addEventListener('click', function(){ checkHolder(owner); }); }
+  }
+
+  async function fetchOilBalance(owner){
+    try{
+      var body = JSON.stringify({ jsonrpc:'2.0', id:'oilbal', method:'getTokenAccountsByOwner', params:[ owner, { mint: CFG.OIL_MINT }, { encoding:'jsonParsed' } ] });
+      var r = await fetch(CFG.RPC, { method:'POST', headers:{'Content-Type':'application/json'}, body:body });
+      if(!r.ok) return 0;
+      var j = await r.json();
+      var accts = j && j.result && j.result.value;
+      if(!accts || !accts.length) return 0;
+      var base = 0;
+      accts.forEach(function(acc){ try{ base += Number(acc.account.data.parsed.info.tokenAmount.amount); }catch(e){} });
+      return base / Math.pow(10, CFG.DECIMALS);
+    }catch(e){ return 0; }
+  }
+
+  async function checkHolder(owner){
+    if(TEST_MODE){
+      wallet.bots = 0;
+      wallet.oil = await fetchOilBalance(owner);
+      applyHolderStatus(owner, true);
+      return;
+    }
+    var body = JSON.stringify({ jsonrpc:'2.0', id:'finnbots', method:'getTokenAccountsByOwner', params:[ owner, { programId: CFG.TOKEN_PROGRAM }, { encoding:'jsonParsed' } ] });
+    var value = null;
+    for(var pass=0; pass<2 && !value; pass++){
+      value = await fetchTokenAccounts(CFG.RPC, body);
+      if(!value && pass===0){ await delay(1200); }
+    }
+    if(!value){ showVerifyFail(owner); return; }
+
+    var held = 0, oilBase = 0;
+    value.forEach(function(acc){
+      try{
+        var info = acc.account.data.parsed.info;
+        var amt = info.tokenAmount;
+        if(amt && Number(amt.decimals) === 0 && Number(amt.amount) >= 1 && botsIds && (info.mint in botsIds)){ held++; }
+        if(info.mint === CFG.OIL_MINT && amt){ oilBase += Number(amt.amount); }
+      }catch(e){}
+    });
+    wallet.bots = held;
+    wallet.oil = oilBase / Math.pow(10, CFG.DECIMALS);
+    applyHolderStatus(owner, false);
+  }
+
+  function applyHolderStatus(owner, isTest){
+    var prefix = isTest ? '\ud83e\uddea TEST MODE \u2014 ' : '';
+    if(wallet.oil >= CFG.ENTRY_FEE){
+      var bonusLine = wallet.bots > 0
+        ? 'You hold <b>'+wallet.bots+'</b> FinnBot'+(wallet.bots===1?'':'s')+', so a win pays <b>1.5\u00d7 the round\u2019s prize</b>.'
+        : 'Hold a FinnBot and a win pays <b>1.5\u00d7 the round\u2019s prize</b>.';
+      setStatus('Connected as <span class="addr">'+shortAddr(owner)+'</span><br/>'+prefix+'You hold <b>'+wallet.oil.toFixed(2)+'</b> $OIL \u2014 cleared to play. '+bonusLine, 'ok');
+      if(!currentRound){ playBtn.disabled = false; playBtn.textContent = 'Play (' + CFG.ENTRY_FEE + ' $OIL)'; }
+    } else {
+      setStatus('Connected as <span class="addr">'+shortAddr(owner)+'</span><br/>'+prefix+'This wallet holds <b>'+wallet.oil.toFixed(2)+'</b> $OIL \u2014 need at least '+CFG.ENTRY_FEE+' to play.', 'warn');
+      playBtn.disabled = true;
+      playBtn.textContent = 'Need ' + CFG.ENTRY_FEE + ' $OIL to play';
+    }
+  }
+
+  var PENDING_ACTION_KEY = 'fb_spotfinnbot_pending_action';
+  function savePendingAction(action){ try{ localStorage.setItem(PENDING_ACTION_KEY, JSON.stringify(action)); }catch(e){} }
+  function loadPendingAction(){ try{ var v = localStorage.getItem(PENDING_ACTION_KEY); return v ? JSON.parse(v) : null; }catch(e){ return null; } }
+  function clearPendingAction(){ try{ localStorage.removeItem(PENDING_ACTION_KEY); }catch(e){} }
+
+  (async function resumePhantomState(){
+    await new Promise(function(res){
+      var check = function(){ if(dataReady) res(); else setTimeout(check, 50); };
+      check();
+    });
+
+    var action = new URLSearchParams(window.location.search).get('phantom_action');
+    if(!action){
+      if(!wallet.pubkey && window.PhantomMobile && PhantomMobile.hasSession()){
+        wallet.pubkey = PhantomMobile.getSessionPublicKey();
+        connectBtn.textContent = 'Connected'; connectBtn.disabled = true;
+        setStatus('Connected as <span class="addr">'+shortAddr(wallet.pubkey)+'</span><br/>Checking your $OIL balance\u2026');
+        checkHolder(wallet.pubkey);
+      }
+      restoreRoundIfStillValid();
+      return;
+    }
+
+    connectBtn.disabled = true; connectBtn.textContent = 'Finishing\u2026';
+    setStatus('Almost there \u2014 finishing up with Phantom\u2026');
+
+    var pending = loadPendingAction();
+    var expectedMarker = pending ? pending.marker : 'spotfinnbot_sign';
+    var result = window.PhantomMobile ? PhantomMobile.consumePendingRedirect(expectedMarker) : null;
+
+    if(result && result.type === 'connect'){
+      wallet.pubkey = result.publicKey;
+      connectBtn.textContent = 'Connected';
+      setStatus('Connected as <span class="addr">'+shortAddr(wallet.pubkey)+'</span><br/>Checking your $OIL balance\u2026');
+      checkHolder(wallet.pubkey);
+      return;
+    }
+
+    if(result && result.type === 'signTransaction' && pending){
+      connectBtn.textContent = 'Connected'; connectBtn.disabled = true;
+      if(pending.owner) wallet.pubkey = pending.owner;
+      clearPendingAction();
+      try{
+        var connection = new solanaWeb3.Connection(CFG.RPC, 'confirmed');
+        var rawSig = await connection.sendRawTransaction(result.txBytes, { skipPreflight:false });
+        setStatus('Payment sent \u2014 waiting for confirmation\u2026');
+        var ok = await confirmSignature(connection, rawSig, 30000);
+        if(!ok) throw new PayError('Confirmation is taking longer than expected. Signature: '+rawSig+'. Do not pay again \u2014 check this signature first.');
+
+        var deserialized = solanaWeb3.Transaction.from(result.txBytes);
+
+        if(pending.action === 'entry'){
+          await beginRoundFromSignature(deserialized.signature);
+        } else if(pending.action === 'hint'){
+          if(restoreRoundIfStillValid() || currentRound){
+            applyHintReveal();
+          } else {
+            setStatus('Your round expired before the hint completed. The 10 $OIL hint charge is on-chain regardless \u2014 start a new round to continue.', 'warn');
+          }
+        }
+        if(wallet.pubkey) checkHolder(wallet.pubkey);
+      }catch(e){
+        var msg = (e instanceof PayError) ? e.userMessage : 'Something went wrong completing that payment after returning from Phantom. Check your wallet activity before trying again.';
+        setStatus('Connected as <span class="addr">'+shortAddr(wallet.pubkey || '')+'</span><br/>'+msg, 'warn');
+      }
+      return;
+    }
+
+    var start = Date.now();
+    var provider = getProvider();
+    while(!provider && Date.now() - start < 3000){ await delay(250); provider = getProvider(); }
+    if(provider){
+      try{
+        var resp = await provider.connect();
+        wallet.pubkey = resp.publicKey.toString();
+        connectBtn.textContent = 'Connected';
+        setStatus('Connected as <span class="addr">'+shortAddr(wallet.pubkey)+'</span><br/>Checking your $OIL balance\u2026');
+        checkHolder(wallet.pubkey);
+        return;
+      }catch(e){}
+    }
+    connectBtn.disabled = false; connectBtn.textContent = 'Connect Phantom';
+    var failMsg = (result && result.type === 'error') ? result.message : 'The connection didn\u2019t complete \u2014 tap Connect to try again.';
+    setStatus(failMsg, 'warn');
+    restoreRoundIfStillValid();
+  })();
+
+  function PayError(msg){ this.userMessage = msg; }
+
+  function u64LE(amount){
+    var out = new Uint8Array(8);
+    var big = BigInt(Math.round(amount));
+    for(var i=0; i<8; i++){ out[i] = Number(big & 0xffn); big >>= 8n; }
+    return out;
+  }
+  function buildTransferIx(sourcePubkey, destPubkey, ownerPubkey, amountBaseUnits){
+    var data = new Uint8Array(9);
+    data[0] = 3;
+    data.set(u64LE(amountBaseUnits), 1);
+    return new solanaWeb3.TransactionInstruction({
+      programId: new solanaWeb3.PublicKey(CFG.TOKEN_PROGRAM),
+      keys: [
+        { pubkey: sourcePubkey, isSigner:false, isWritable:true },
+        { pubkey: destPubkey, isSigner:false, isWritable:true },
+        { pubkey: ownerPubkey, isSigner:true, isWritable:false }
+      ],
+      data: data
+    });
+  }
+  function buildMemoIx(ownerPubkey, text){
+    return new solanaWeb3.TransactionInstruction({
+      programId: new solanaWeb3.PublicKey(CFG.MEMO_PROGRAM),
+      keys: [{ pubkey: ownerPubkey, isSigner:true, isWritable:false }],
+      data: new TextEncoder().encode(text)
+    });
+  }
+  async function confirmSignature(connection, signature, timeoutMs){
+    var start = Date.now();
+    while(Date.now() - start < timeoutMs){
+      var res = await connection.getSignatureStatuses([signature]);
+      var st = res && res.value && res.value[0];
+      if(st){
+        if(st.err) throw new PayError('The transaction failed on-chain \u2014 no charge was made. Please try again.');
+        if(st.confirmationStatus === 'confirmed' || st.confirmationStatus === 'finalized') return true;
+      }
+      await delay(1500);
+    }
+    return false;
+  }
+
+  async function sendPayment(amountOil, memoText, action){
+    var provider = getProvider();
+    var useMobileDeeplink = !provider && window.PhantomMobile && PhantomMobile.isMobile() && PhantomMobile.hasSession();
+    if(!provider && !useMobileDeeplink) throw new PayError('Phantom isn\u2019t reachable here \u2014 open this page in your own browser, or tap Connect again on mobile.');
+
+    var ownerPk = new solanaWeb3.PublicKey(wallet.pubkey);
+    var connection = new solanaWeb3.Connection(CFG.RPC, 'confirmed');
+
+    var tokAccts = await connection.getTokenAccountsByOwner(ownerPk, { mint: new solanaWeb3.PublicKey(CFG.OIL_MINT) });
+    if(!tokAccts.value.length) throw new PayError('No $OIL account found in this wallet.');
+    var sourcePubkey = tokAccts.value[0].pubkey;
+
+    var balInfo = await connection.getTokenAccountBalance(sourcePubkey);
+    var haveBase = Number(balInfo.value.amount);
+    var needBase = Math.round(amountOil * Math.pow(10, CFG.DECIMALS));
+    if(haveBase < needBase) throw new PayError('Not enough liquid $OIL \u2014 need '+amountOil+', this wallet has '+(haveBase/Math.pow(10,CFG.DECIMALS)).toFixed(2)+'.');
+
+    var destPubkey = new solanaWeb3.PublicKey(CFG.TREASURY_TOKEN_ACCOUNT);
+    var tx = new solanaWeb3.Transaction();
+    tx.add(
+      buildTransferIx(sourcePubkey, destPubkey, ownerPk, needBase),
+      buildMemoIx(ownerPk, memoText)
+    );
+    tx.feePayer = ownerPk;
+    var latest = await connection.getLatestBlockhash();
+    tx.recentBlockhash = latest.blockhash;
+
+    if(useMobileDeeplink){
+      savePendingAction({ action: action, owner: wallet.pubkey, marker: 'spotfinnbot_sign' });
+      saveRoundState();
+      setStatus('Opening Phantom to approve\u2026');
+      var unsignedBytes = tx.serialize({ requireAllSignatures:false, verifySignatures:false });
+      var returnUrl = window.location.origin + window.location.pathname;
+      PhantomMobile.signTransaction(unsignedBytes, returnUrl, 'spotfinnbot_sign');
+      return null;
+    }
+
+    var signed = await provider.signTransaction(tx);
+    setStatus('Sending payment\u2026');
+    var rawSig = await connection.sendRawTransaction(signed.serialize(), { skipPreflight:false });
+    setStatus('Payment sent \u2014 waiting for confirmation\u2026');
+    var ok = await confirmSignature(connection, rawSig, 30000);
+    if(!ok) throw new PayError('Confirmation is taking longer than expected. Signature: '+rawSig+'. Do not pay again \u2014 check this signature first.');
+    return signed.signature;
+  }
+
+  function applyHintReveal(){
+    if(!currentRound || hintUsed) return;
+    hintUsed = true;
+    hintBtn.disabled = true;
+    saveRoundState();
+    var targetTraits = botTraits[currentRound.targetBotNumber];
+    var traitKeys = Object.keys(targetTraits);
+    var revealedKey = traitKeys[Math.floor(Math.random() * traitKeys.length)];
+    renderTargetPrompt(targetTraits, revealedKey);
+  }
+
+  hintBtn.addEventListener('click', async function(){
+    if(busy || !currentRound || hintUsed) return;
+    busy = true;
+    hintBtn.disabled = true;
+    setStatus('Sending hint payment\u2026');
+    try{
+      var sigBytes = await sendPayment(CFG.HINT_FEE, MEMO_TAG + '|hint', 'hint');
+      if(sigBytes === null){ return; }
+      applyHintReveal();
+      if(wallet.pubkey) checkHolder(wallet.pubkey);
+    }catch(e){
+      var msg = (e instanceof PayError) ? e.userMessage : 'Something went wrong sending the hint payment. No confirmed charge means nothing was taken.';
+      setStatus('Connected as <span class="addr">'+shortAddr(wallet.pubkey)+'</span><br/>'+msg, 'warn');
+      hintBtn.disabled = hintUsed;
+    }finally{
+      busy = false;
+    }
+  });
+
+  playBtn.addEventListener('click', async function(){
+    if(busy) return;
+
+    if(!currentRound){
+      if(!canPlay()){ setStatus('Connect a wallet holding at least '+CFG.ENTRY_FEE+' $OIL to play.', 'warn'); return; }
+      busy = true;
+      playBtn.disabled = true;
+      playBtn.textContent = 'Sending entry\u2026';
+      try{
+        var sigBytes = await sendPayment(CFG.ENTRY_FEE, MEMO_TAG + '|entry', 'entry');
+        if(sigBytes === null){ return; }
+        await beginRoundFromSignature(sigBytes);
+      }catch(e){
+        var msg = (e instanceof PayError) ? e.userMessage : 'Something went wrong sending the entry payment. No confirmed charge means nothing was taken.';
+        setStatus('Connected as <span class="addr">'+shortAddr(wallet.pubkey)+'</span><br/>'+msg, 'warn');
+        playBtn.disabled = false;
+        playBtn.textContent = 'Play (' + CFG.ENTRY_FEE + ' $OIL)';
+      }finally{
+        busy = false;
+      }
+      return;
+    }
+
+    if(selectedTileIndex === null) return;
+    busy = true;
+    var won = selectedTileIndex === currentRound.targetIndex;
+    finishRound(won);
+  });
+})();
+</script>
+</body>
+</html>
