@@ -544,26 +544,51 @@
       applyHolderStatus(owner, true);
       return;
     }
+    // Single broad read using the inline fetch/parse shape proven to work on
+    // mobile (no AbortController). One call yields OIL balance AND Bot count.
     var body = JSON.stringify({ jsonrpc:'2.0', id:'finnbots', method:'getTokenAccountsByOwner', params:[ owner, { programId: CFG.TOKEN_PROGRAM }, { encoding:'jsonParsed' } ] });
     var value = null;
     for(var pass=0; pass<2 && !value; pass++){
-      value = await fetchTokenAccounts(CFG.RPC, body);
+      try{
+        var r = await fetch(CFG.RPC, { method:'POST', headers:{'Content-Type':'application/json'}, body:body });
+        if(r.ok){
+          var j = await r.json();
+          if(!j.error && j.result && j.result.value){ value = j.result.value; }
+        }
+      }catch(e){ /* retry / fallback below */ }
       if(!value && pass===0){ await delay(1200); }
     }
-    if(!value){ showVerifyFail(owner); return; }
 
-    var held = 0, oilBase = 0;
-    value.forEach(function(acc){
-      try{
-        var info = acc.account.data.parsed.info;
-        var amt = info.tokenAmount;
-        if(amt && Number(amt.decimals) === 0 && Number(amt.amount) >= 1 && botsIds && (info.mint in botsIds)){ held++; }
-        if(info.mint === CFG.OIL_MINT && amt){ oilBase += Number(amt.amount); }
-      }catch(e){}
-    });
-    wallet.bots = held;
-    wallet.oil = oilBase / Math.pow(10, CFG.DECIMALS);
-    applyHolderStatus(owner, false);
+    if(value){
+      var held = 0, oilBase = 0;
+      value.forEach(function(acc){
+        try{
+          var info = acc.account.data.parsed.info;
+          var amt = info.tokenAmount;
+          if(amt && Number(amt.decimals) === 0 && Number(amt.amount) >= 1 && botsIds && (info.mint in botsIds)){ held++; }
+          if(info.mint === CFG.OIL_MINT && amt){ oilBase += Number(amt.amount); }
+        }catch(e){}
+      });
+      wallet.bots = held;
+      wallet.oil = oilBase / Math.pow(10, CFG.DECIMALS);
+      applyHolderStatus(owner, false);
+      return;
+    }
+
+    // Fallback: the broad read failed, but the mint-filtered OIL call is
+    // reliable. Keep the player able to play; degrade the Bot bonus honestly,
+    // never deny a holder silently.
+    var oilFallback = await fetchOilBalance(owner);
+    wallet.oil = oilFallback;
+    wallet.bots = 0;
+    if(oilFallback >= CFG.ENTRY_FEE){
+      setStatus('Connected as <span class="addr">'+shortAddr(owner)+'</span><br/>You hold <b>'+oilFallback.toFixed(2)+'</b> $OIL \u2014 cleared to play. Couldn\u2019t confirm a Bot bonus right now \u2014 playing without 1.5\u00d7. <button id="retryCheck" class="retry-btn" type="button">Retry check</button>', 'warn');
+      if(!currentRound){ playBtn.disabled = false; playBtn.textContent = 'Play (' + CFG.ENTRY_FEE + ' $OIL)'; }
+      var rb2 = document.getElementById('retryCheck');
+      if(rb2){ rb2.addEventListener('click', function(){ checkHolder(owner); }); }
+    } else {
+      applyHolderStatus(owner, false);
+    }
   }
 
   function applyHolderStatus(owner, isTest){
