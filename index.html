@@ -23,18 +23,20 @@
   }
   *{box-sizing:border-box; margin:0; padding:0;}
   html,body{height:100%;}
-  html{overflow:hidden;}
+  html{overflow-x:hidden;}
   body{
     font-family:var(--font-body); background:var(--bg-soft); color:var(--ink); line-height:1.3;
-    -webkit-font-smoothing:antialiased; display:flex; justify-content:center; overflow:hidden;
-    height:100vh; height:100dvh;
+    -webkit-font-smoothing:antialiased; display:flex; justify-content:center; align-items:flex-start; overflow-x:hidden; overflow-y:auto;
+    min-height:100vh; min-height:100dvh;
     padding: max(8px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
   }
-  .wrap{ width:100%; max-width:min(480px, 96vw); height:100%; display:flex; flex-direction:column; gap: clamp(6px, 1.4dvh, 12px); }
+  .wrap{ width:100%; max-width:min(480px, 96vw); min-height:100%; display:flex; flex-direction:column; gap: clamp(6px, 1.4dvh, 12px); }
 
   .test-banner{ flex:0 0 auto; background:#c0392b; color:#fff; font-family:var(--font-display); font-size:clamp(10px,1.3vw,14px); text-align:center; padding:9px 12px; border-radius:var(--r-sm); line-height:1.6; }
   .test-banner b{ display:block; font-size:clamp(11px,1.5vw,16px); margin-bottom:2px; }
   .hidden{ display:none !important; }
+  body.playing .quickfacts, body.playing .walletbar, body.playing footer{ display:none; }
+  body.playing .wrap{ gap: clamp(4px, 1dvh, 8px); }
 
   .topbar{ flex:0 0 auto; display:flex; align-items:center; gap:8px; background:var(--card); border-radius:var(--r-lg); padding:10px 14px; box-shadow:var(--shadow-sm); }
   .eyebrow{ font-family:var(--font-display); font-size:clamp(9px,1.1vw,13px); letter-spacing:.5px; color:var(--plum); background:rgba(95,76,87,0.10); padding:6px 10px; border-radius:var(--r-pill); flex:0 0 auto; white-space:nowrap; }
@@ -69,8 +71,8 @@
   .target-prompt{ flex:0 0 auto; text-align:center; font-size:13px; color:var(--ink); background:var(--card); border-radius:var(--r-sm); padding:8px 10px; box-shadow:var(--shadow-sm); }
   .target-prompt b{ font-family:var(--font-display); font-size:14px; color:var(--plum); }
 
-  .grid-wrap{ flex:1 1 auto; min-height:0; display:flex; align-items:center; justify-content:center; overflow:hidden; container-type:size; container-name:grid; }
-  .grid{ width:100%; display:grid; grid-template-columns:repeat(5,1fr); gap: clamp(3px, 1.6cqh, 8px) clamp(3px, 1.6cqw, 8px); }
+  .grid-wrap{ flex:0 0 auto; display:flex; align-items:center; justify-content:center; }
+  .grid{ width:100%; aspect-ratio:1/1; display:grid; grid-template-columns:repeat(5,1fr); grid-template-rows:repeat(5,1fr); gap: clamp(4px, 1.4vmin, 9px); }
   .tile{ appearance:none; border:2px solid transparent; cursor:pointer; aspect-ratio:1/1; border-radius:var(--r-sm); overflow:hidden; position:relative; background:var(--card); box-shadow:var(--shadow-sm); transition:transform 150ms var(--smooth), border-color 120ms; }
   .tile img{ width:100%; height:100%; object-fit:cover; image-rendering:pixelated; display:block; }
   .tile .img-fallback{ width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-size:10px; color:var(--plum); background:var(--bg-soft); }
@@ -196,15 +198,15 @@
   var BUILD_TAG = 'v3-20260710b';
   console.log('[spot-a-finnbot] build', BUILD_TAG);
 
-  var TEST_MODE = true;
+  var TEST_MODE = false;
 
   var CFG = TEST_MODE ? {
     RPC: 'http://127.0.0.1:8899',
     TOKEN_PROGRAM: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
     MEMO_PROGRAM: 'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr',
-    OIL_MINT: '6baNBq3oskrVv32sVRun5nnuFMkdqgMJZQ9GP267ATsi',        // created fresh 7 July 2026 -- validator was reset, Pick-a-Bot's old test mint no longer existed
+    OIL_MINT: '9B5ZQifZQc3ykhnZhA9m8DFoNY5uaTwqHGNZMah6eK8Y',        // created fresh 7 July 2026 -- validator was reset, Pick-a-Bot's old test mint no longer existed
     TREASURY: '8tzZzNiGkE2kYXhUSauNEUyVHiaWBt5pBagg7CHKPNBM',
-    TREASURY_TOKEN_ACCOUNT: 'DgMvLhTYUAHPHXAQJv7PXJrpnqDPNSsVPvtxneNYWBrG', // created fresh 7 July 2026, matches the new OIL_MINT above
+    TREASURY_TOKEN_ACCOUNT: '3s1SQ7JZmti4PfhVsb7LCTn9q5ZhRBMaH6v2vsrVZeg6', // created fresh 7 July 2026, matches the new OIL_MINT above
     ENTRY_FEE: 25,
     HINT_FEE: 10,
     CLAIM_FEE: 1,
@@ -281,6 +283,7 @@
   }
 
   function renderGrid(round){
+    document.body.classList.add('playing');
     grid.innerHTML = '';
     round.gridBotNumbers.forEach(function(botNumber, i){
       var t = document.createElement('button');
@@ -435,6 +438,7 @@
   }
 
   function resetToPlayState(){
+    document.body.classList.remove('playing');
     stage.innerHTML = '';
     currentRound = null;
     selectedTileIndex = null;

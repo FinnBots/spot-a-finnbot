@@ -29,6 +29,16 @@
  * only share the Background category at all, so any apparent "2/3 match"
  * across editions is mostly coincidence, not real visual confusability.
  * Decoys are filtered to the target's own edition before scoring.
+ *
+ * Short-pool exception (added 23 Aug 2026, Chat 11): if the target's own
+ * edition yields fewer than 24 usable decoys after exclusions, the grid
+ * is backfilled with cross-edition Bots as UNSCORED filler (never as
+ * near-misses) purely to reach 25 tiles. Same-edition remains the pool
+ * for all trait-overlap scoring; cross-edition Bots are only ever padding.
+ * This top-up draws off the same mulberry32 stream and MUST be mirrored
+ * in stage_prize_scanner.py or win verification breaks. It fires ONLY for
+ * short editions, so non-short rounds draw no extra rng and existing
+ * JS<->Python parity vectors are unaffected.
  */
 
 // Edition Bot-number ranges, per Technical Specs - used to restrict the
@@ -175,6 +185,27 @@ function buildRoundDeterministic(allBotTraits, sigHashHex, excludedBotNumbers) {
     let remaining = scored.filter(function (b) { return !usedSet.has(b.botNumber); });
     seededShuffle(remaining, rng);
     decoys.push.apply(decoys, remaining.slice(0, 24 - decoys.length).map(function (b) { return b.botNumber; }));
+  }
+
+  // Short-edition backfill: if the target's own edition cannot supply 24
+  // decoys after exclusions, top up with cross-edition Bots as UNSCORED
+  // filler to reach 25 tiles. Drawn off the same rng stream and MUST be
+  // mirrored exactly in the Python scanner. Fires ONLY when the same-edition
+  // pool is genuinely short, so non-short rounds draw no extra rng here and
+  // existing parity vectors are unaffected.
+  if (decoys.length < 24) {
+    const usedSet = new Set(decoys);
+    usedSet.add(targetBotNumber);
+    const crossEdition = [];
+    for (const botNumber of Object.keys(allBotTraits)) {
+      if (usedSet.has(botNumber)) continue;
+      if (excluded.has(botNumber)) continue;
+      if (getEdition(botNumber) === targetEdition) continue;
+      crossEdition.push(botNumber);
+    }
+    crossEdition.sort(function (a, b) { return Number(a) - Number(b); });
+    seededShuffle(crossEdition, rng);
+    decoys.push.apply(decoys, crossEdition.slice(0, 24 - decoys.length));
   }
 
   const gridBotNumbers = decoys.concat([targetBotNumber]);
