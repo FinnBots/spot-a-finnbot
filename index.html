@@ -879,5 +879,7 @@
   });
 })();
 </script>
+<script>/* Auto-open the How-To as an intro on first load (skip Phantom redirect returns). */
+try{var _bpIntro=new URLSearchParams(location.search);if(!_bpIntro.get('phantom_action')&&_bpIntro.get('src')!=='browse'){addEventListener('load',function(){var b=document.getElementById('infoBtn');if(b)b.click();});}}catch(e){}</script>
 </body>
 </html>
