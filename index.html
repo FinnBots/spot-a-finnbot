@@ -37,6 +37,7 @@
   .test-banner b{ display:block; font-size:clamp(11px,1.5vw,16px); margin-bottom:2px; }
   .hidden{ display:none !important; }
   body.playing .quickfacts, body.playing .walletbar, body.playing footer{ display:none; }
+  body.playing #freeBtn{ display:none; }
   body.playing .wrap{ gap: clamp(4px, 1dvh, 8px); }
 
   .topbar{ flex:0 0 auto; display:flex; align-items:center; gap:8px; background:var(--card); border-radius:var(--r-lg); padding:10px 14px; box-shadow:var(--shadow-sm); }
@@ -82,7 +83,11 @@
   .tile.wrong{ border-color:#c0392b; opacity:.5; }
   .tile:disabled{ cursor:default; }
 
-  .action-bar{ flex:0 0 auto; }
+  .action-bar{ flex:0 0 auto; display:flex; flex-direction:column; gap:6px; }
+  .play.free{ background:var(--electric); }
+  .upsell{ font-size:13px; color:var(--muted); margin-top:14px; padding-top:14px; border-top:1px solid var(--line); }
+  .upsell b{ color:var(--ink); font-weight:600; }
+  .upsell a{ color:var(--electric); font-weight:600; text-decoration:none; display:inline-block; margin-top:4px; }
   .play{ appearance:none; border:none; width:100%; cursor:pointer; font-family:var(--font-display); font-size:clamp(14px,1.8vw,18px); color:#fff; background:var(--plum); padding:12px var(--r-lg); border-radius:var(--r-sm); box-shadow:var(--shadow-md); }
   .play:disabled{ background:var(--line); color:var(--muted); box-shadow:none; cursor:not-allowed; }
   .play:active:not(:disabled){ transform:scale(.98); }
@@ -122,11 +127,11 @@
       <button class="infobtn" id="infoBtn" type="button" aria-haspopup="dialog" aria-controls="howtoModal" title="How this works">i</button>
     </header>
 
-    <div class="quickfacts"><p><b>25 $OIL</b> to enter &nbsp;·&nbsp; <b>10 $OIL</b> hint &nbsp;·&nbsp; Bot-holder <b>1.5×</b> prize</p></div>
+    <div class="quickfacts"><p><b>Free</b> to play &nbsp;·&nbsp; <b>25 $OIL</b> to play for prizes &nbsp;·&nbsp; Bot-holder <b>1.5×</b> prize</p></div>
 
     <section class="walletbar" id="connectCard">
       <div class="wb-row">
-        <span class="wb-text">Hold 25 $OIL to play — a Bot pays 1.5× on a win</span>
+        <span class="wb-text">Free play below — or hold 25 $OIL to play for prizes</span>
         <button class="connect-btn" id="connectBtn" type="button">Connect</button>
       </div>
       <div class="wallet-status hidden" id="walletStatus" aria-live="polite"></div>
@@ -138,7 +143,7 @@
         <span class="timer-pill" id="timerPill">--</span>
         <button class="hint-btn" id="hintBtn" type="button" disabled>Hint (10 $OIL)</button>
       </div>
-      <div class="target-prompt" id="targetPrompt">Connect your wallet, then play to see today's target.</div>
+      <div class="target-prompt" id="targetPrompt">Play free to see a target — or connect your wallet to play for $OIL.</div>
       <div class="grid-wrap">
         <span id="gridLabel" class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;">Spot the Bot matching the rolled traits</span>
         <div class="grid" role="radiogroup" aria-labelledby="gridLabel" id="grid"></div>
@@ -146,7 +151,8 @@
     </main>
 
     <div class="action-bar">
-      <button class="play" id="playBtn" disabled>Connect wallet to play</button>
+      <button class="play free" id="freeBtn" type="button" disabled>Loading Bots…</button>
+      <button class="play" id="playBtn" disabled>Connect wallet to play for $OIL</button>
     </div>
 
     <footer>
@@ -163,7 +169,9 @@
   <div class="hidden" id="howtoModal" role="dialog" aria-modal="true" aria-labelledby="howtoTitle">
     <div class="howto-card">
       <h2 id="howtoTitle">How this works</h2>
-      <p><b>Roll and spot.</b> Pay 25 $OIL to start a round. You'll see a trait combination and 45 seconds to find the one matching Bot among 25 on screen.</p>
+      <p><b>Roll and spot.</b> You'll see a trait combination and 45 seconds to find the one matching Bot among 25 on screen.</p>
+      <p><b>Free play.</b> Tap <b>Play free</b> any time — no wallet, no $OIL, hints included. It's the same game; there's just no prize.</p>
+      <p><b>Play for prizes.</b> Pay 25 $OIL to start a prize round.</p>
       <p><b>Difficulty varies.</b> Rounds are easy, medium, or hard (roughly 40% / 40% / 20% of rounds) — harder rounds have more decoy Bots that closely resemble the target. Which tier you get is derived from your entry transaction's own signature, so nobody — including us — can control it in advance.</p>
       <p><b>Stuck?</b> A 10 $OIL hint reveals one of the target's traits.</p>
       <p><b>Bot-holder bonus.</b> Hold a FinnBot and a win pays 1.5× the round's prize (Easy 100, Medium 150, Hard 300 $OIL before the bonus), paid in the next weekly batch — same as emissions, not instantly.</p>
@@ -242,6 +250,7 @@
 
   var grid = document.getElementById('grid');
   var playBtn = document.getElementById('playBtn');
+  var freeBtn = document.getElementById('freeBtn');
   var hintBtn = document.getElementById('hintBtn');
   var stage = document.getElementById('stage');
   var connectBtn = document.getElementById('connectBtn');
@@ -262,6 +271,8 @@
       console.error('[spot-a-finnbot] failed to load game data', e);
     }
     dataReady = true;
+    if(botTraits){ freeBtn.disabled = false; freeBtn.textContent = 'Play free'; }
+    else { freeBtn.textContent = 'Couldn\u2019t load the Bots \u2014 refresh to try again'; }
   })();
 
   function botImageURL(botNumber){ return ARWEAVE_BASE + '/' + botNumber + '.png'; }
@@ -274,6 +285,11 @@
   function pickRandomTargetBotNumber(){
     var candidates = Object.keys(botTraits).filter(function(n){ return !EXCLUDED_BOT_NUMBERS.has(n); });
     return candidates[Math.floor(Math.random() * candidates.length)];
+  }
+
+  // Free rounds give the hint away; prize rounds charge HINT_FEE for it.
+  function setHintLabel(){
+    hintBtn.textContent = (currentRound && currentRound.free) ? 'Hint (free)' : 'Hint (' + CFG.HINT_FEE + ' $OIL)';
   }
 
   function renderTargetPrompt(traits, revealedKey){
@@ -343,6 +359,7 @@
         targetBotNumber: currentRound.targetBotNumber,
         entrySigHex: currentRound.entrySigHex,
         roundStartedAt: currentRound.roundStartedAt,
+        free: !!currentRound.free,
         hintUsed: hintUsed,
         owner: wallet.pubkey
       }));
@@ -369,6 +386,7 @@
     tierPill.textContent = saved.tier.charAt(0).toUpperCase() + saved.tier.slice(1) + ' round';
     renderTargetPrompt(botTraits[saved.targetBotNumber], hintUsed ? Object.keys(botTraits[saved.targetBotNumber])[0] : null);
     renderGrid(saved);
+    setHintLabel();
     hintBtn.disabled = hintUsed || busy;
     playBtn.textContent = 'Select a Bot';
     playBtn.disabled = true;
@@ -376,7 +394,9 @@
     return true;
   }
 
-  async function beginRoundFromSignature(sigBytes){
+  // A free round is built exactly like a prize round, from 64 random bytes in
+  // place of the entry signature — same grid, same tier odds, same timer.
+  async function beginRoundFromSignature(sigBytes, free){
     var digest = await crypto.subtle.digest('SHA-256', sigBytes);
     var hex = Array.prototype.map.call(new Uint8Array(digest), function(b){ return b.toString(16).padStart(2,'0'); }).join('');
 
@@ -393,13 +413,15 @@
       tier: tier,
       targetBotNumber: targetBotNumber,
       entrySigHex: hex,        // needed to build the win-claim memo
-      roundStartedAt: Date.now()
+      roundStartedAt: Date.now(),
+      free: !!free             // free rounds never pay, hint or claim on-chain
     };
     selectedTileIndex = null;
     hintUsed = false;
     saveRoundState();
 
     tierPill.textContent = tier.charAt(0).toUpperCase() + tier.slice(1) + ' round';
+    setHintLabel();
     hintBtn.disabled = false;
     playBtn.textContent = 'Select a Bot';
     playBtn.disabled = true;
@@ -425,6 +447,21 @@
     var tierPrize = currentRound ? TIER_PRIZES[currentRound.tier] : TIER_PRIZES.easy; // fallback should never trigger -- currentRound only null if finishRound is called incorrectly
     var prize = wallet.bots > 0 ? Math.round(tierPrize * HOLDER_BONUS_MULTIPLIER) : tierPrize;
     var html = '<div class="result ' + (won ? 'win' : '') + '">';
+    if(currentRound && currentRound.free){
+      if(won){
+        html += '<h2>Spotted!</h2>';
+        html += '<span class="prize">In a prize round, that wins ' + prize + ' $OIL</span>';
+        html += '<p class="detail">' + currentRound.tier.charAt(0).toUpperCase() + currentRound.tier.slice(1) + ' round \u2014 nicely found.</p>';
+      } else {
+        html += '<h2>Not this time</h2>';
+        html += '<p class="detail">Time ran out or the wrong Bot was selected. Have another go \u2014 it costs nothing here.</p>';
+      }
+      html += '<button class="again" id="againBtn" type="button">Play again</button>';
+      html += '<p class="upsell">Free play is just for fun. <b>Hold $OIL to play for real prizes</b> \u2014 anyone with ' + CFG.ENTRY_FEE + ' $OIL can enter, and <b>holding a FinnBot pays 1.5\u00d7 on a win</b>. Winners are paid in the weekly batch. <a href="https://magiceden.us/marketplace/finnbot" target="_blank" rel="noopener">Buy a Bot on Magic Eden \u2197</a></p></div>';
+      stage.innerHTML = html;
+      document.getElementById('againBtn').addEventListener('click', resetToPlayState);
+      return;
+    }
     if(won){
       html += '<h2>Spotted!</h2>';
       html += '<span class="prize">' + prize + ' $OIL' + (wallet.bots > 0 ? ' (1.5\u00d7 Bot-holder bonus)' : '') + ' \u2014 recorded for the weekly batch</span>';
@@ -445,12 +482,15 @@
     selectedTileIndex = null;
     hintUsed = false;
     grid.innerHTML = '';
-    targetPrompt.textContent = 'Play to see the next target.';
+    targetPrompt.textContent = 'Play free to see the next target \u2014 or play for $OIL.';
     tierPill.textContent = 'Not started';
     timerPill.textContent = '--';
     hintBtn.disabled = true;
+    setHintLabel();
+    freeBtn.disabled = !botTraits;
+    freeBtn.textContent = 'Play free';
     playBtn.disabled = !canPlay();
-    playBtn.textContent = canPlay() ? 'Play (' + CFG.ENTRY_FEE + ' $OIL)' : 'Connect wallet to play';
+    playBtn.textContent = canPlay() ? 'Play (' + CFG.ENTRY_FEE + ' $OIL)' : 'Connect wallet to play for $OIL';
     if(wallet.pubkey) checkHolder(wallet.pubkey);
   }
 
@@ -602,8 +642,7 @@
       if(!currentRound){ playBtn.disabled = false; playBtn.textContent = 'Play (' + CFG.ENTRY_FEE + ' $OIL)'; }
     } else {
       setStatus('Connected as <span class="addr">'+shortAddr(owner)+'</span><br/>'+prefix+'This wallet holds <b>'+wallet.oil.toFixed(2)+'</b> $OIL \u2014 need at least '+CFG.ENTRY_FEE+' to play.', 'warn');
-      playBtn.disabled = true;
-      playBtn.textContent = 'Need ' + CFG.ENTRY_FEE + ' $OIL to play';
+      if(!currentRound){ playBtn.disabled = true; playBtn.textContent = 'Need ' + CFG.ENTRY_FEE + ' $OIL to play for prizes'; }
     }
   }
 
@@ -801,6 +840,7 @@
 
   hintBtn.addEventListener('click', async function(){
     if(busy || !currentRound || hintUsed) return;
+    if(currentRound.free){ applyHintReveal(); return; }
     busy = true;
     hintBtn.disabled = true;
     setStatus('Sending hint payment\u2026');
@@ -813,6 +853,17 @@
       var msg = (e instanceof PayError) ? e.userMessage : 'Something went wrong sending the hint payment. No confirmed charge means nothing was taken.';
       setStatus('Connected as <span class="addr">'+shortAddr(wallet.pubkey)+'</span><br/>'+msg, 'warn');
       hintBtn.disabled = hintUsed;
+    }finally{
+      busy = false;
+    }
+  });
+
+  freeBtn.addEventListener('click', async function(){
+    if(busy || currentRound || !botTraits) return;
+    busy = true;
+    freeBtn.disabled = true;
+    try{
+      await beginRoundFromSignature(crypto.getRandomValues(new Uint8Array(64)), true);
     }finally{
       busy = false;
     }
@@ -847,6 +898,10 @@
 
     if(!won){
       finishRound(false);
+      return;
+    }
+    if(currentRound.free){
+      finishRound(true);
       return;
     }
 
