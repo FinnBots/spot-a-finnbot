@@ -446,6 +446,7 @@ body:not(.mode-paid) .app .facts{ display:block !important; }
       <p><b>Difficulty varies.</b> Rounds are easy, medium, or hard (roughly 40% / 40% / 20% of rounds) — harder rounds have more decoy Bots that closely resemble the target. Which tier you get is derived from your entry transaction's own signature, so nobody — including us — can control it in advance.</p>
       <p><b>Stuck?</b> A 10 $OIL hint reveals one of the target's traits.</p>
       <p><b>Bot-holder bonus.</b> Hold a FinnBot and a win pays 1.5× the round's prize (Easy 100, Medium 150, Hard 300 $OIL before the bonus), paid in the next weekly batch — same as emissions, not instantly.</p>
+      <p><b>Daily limit.</b> One prize per wallet per day (UTC), and up to 1,000 $OIL of prizes per day across all players. A win past either limit is recorded but not paid.</p>
       <p><b>Payment.</b> Each action (entry, hint) is exactly one signed transaction. Nothing is ever taken without your approval.</p>
       <p><b>Wallet safety.</b> We only ever read your $OIL balance and which Bots you hold. We'll never ask for your seed phrase.</p>
       <button class="howto-close" id="howtoCloseBtn" type="button">Got it</button>
@@ -736,7 +737,7 @@ body:not(.mode-paid) .app .facts{ display:block !important; }
     if(won){
       html += '<h2>Spotted!</h2>';
       html += '<span class="prize">' + prize + ' $OIL' + (wallet.bots > 0 ? ' (1.5\u00d7 Bot-holder bonus)' : '') + ' \u2014 recorded for the weekly batch</span>';
-      html += '<p class="detail">Prize isn\u2019t sent instantly \u2014 it arrives with the next weekly $OIL payout, same as emissions.</p>';
+      html += '<p class="detail">Prize isn\u2019t sent instantly \u2014 it arrives with the next weekly $OIL payout, same as emissions. One prize per wallet per day (UTC): a second win today is recorded, not paid.</p>';
     } else {
       html += '<h2>Not this time</h2>';
       html += '<p class="detail">Time ran out or the wrong Bot was selected. Your ' + CFG.ENTRY_FEE + ' $OIL entry is on-chain. Have another go any time.</p>';
